@@ -57,6 +57,7 @@ public class Session implements Serializable
     static
     {
         availableOptions.addOption("h",  "help",                 false,  "Show this help message and exit");
+        availableOptions.addOption("J",  "starting-key",         true,   "Starting key, default:0");
         availableOptions.addOption("n",  "num-keys",             true,   "Number of keys, default:1000000");
         availableOptions.addOption("F",  "num-different-keys",   true,   "Number of different keys (if < NUM-KEYS, the same key will re-used multiple times), default:NUM-KEYS");
         availableOptions.addOption("N",  "skip-keys",            true,   "Fraction of keys to skip initially, default:0");
@@ -91,6 +92,7 @@ public class Session implements Serializable
         availableOptions.addOption("Z",  "compaction-strategy",  true,   "CompactionStrategy to use.");
     }
 
+    private int startingKey      = 0;
     private int numKeys          = 1000 * 1000;
     private int numDifferentKeys = numKeys;
     private float skipKeys       = 0;
@@ -149,6 +151,9 @@ public class Session implements Serializable
 
             if (cmd.hasOption("h"))
                 throw new IllegalArgumentException("help");
+
+            if (cmd.hasOption("J"))
+                startingKey = Integer.parseInt(cmd.getOptionValue("J"));
 
             if (cmd.hasOption("n"))
                 numKeys = Integer.parseInt(cmd.getOptionValue("n"));
@@ -364,7 +369,12 @@ public class Session implements Serializable
         return columnFamilyType;
     }
 
-    public int getNumKeys()
+    public int getStartingKey()
+    {
+        return startingKey;
+    }
+
+      public int getNumKeys()
     {
         return numKeys;
     }

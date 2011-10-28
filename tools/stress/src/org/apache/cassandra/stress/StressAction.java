@@ -68,7 +68,7 @@ public class StressAction extends Thread
             consumers[i] = new Consumer(itemsPerThread);
         }
 
-        Producer producer = new Producer();
+        Producer producer = new Producer(client);
         producer.start();
 
         // starting worker threads
@@ -147,6 +147,11 @@ public class StressAction extends Thread
     private class Producer extends Thread
     {
         private volatile boolean stop = false;
+        private final Session client;
+
+        public Producer(Session session){
+          client = session;
+        }
 
         public void run()
         {
@@ -157,7 +162,7 @@ public class StressAction extends Thread
 
                 try
                 {
-                    operations.put(createOperation(i % client.getNumDifferentKeys()));
+                    operations.put(createOperation((i % client.getNumDifferentKeys()) + client.getStartingKey()));
                 }
                 catch (InterruptedException e)
                 {
