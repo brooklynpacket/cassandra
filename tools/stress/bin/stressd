@@ -52,10 +52,16 @@ fi
 
 case "$1" in
   start)
-    echo "Starting $DESC: "
-    $JAVA -server -cp $CLASSPATH org.apache.cassandra.stress.StressServer $@ 1> ./stressd.out.log 2> ./stressd.err.log &
-    echo $! > ./stressd.pid
-    echo "done."
+    PID=`cat ./stressd.pid 2> /dev/null`
+    
+    if [ "x$PID" = "x" ]; then
+      echo "Starting $DESC: "
+      $JAVA -server -cp $CLASSPATH org.apache.cassandra.stress.StressServer $@ 1> ./stressd.out.log 2> ./stressd.err.log &
+      echo $! > ./stressd.pid
+      echo "done."
+    else
+      echo "$DESC is already running with pid $PID."
+    fi
   ;;
   
   stop)
