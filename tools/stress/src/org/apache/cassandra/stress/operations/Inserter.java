@@ -27,34 +27,32 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class Inserter extends Operation
 {
     private static List<ByteBuffer>[] values;
+    private static ConcurrentHashMap<String, Integer> offset = new ConcurrentHashMap<String, Integer>();
 
-    private static HashMap<String, Integer> offset = new HashMap<String, Integer>();
-
-    public Inserter(Session client, int index)
+    public Inserter(Session client, int index) throws IOException
     {
         super(client, index);
+
+        synchronized (getClass()){
+            if (values == null){
+                System.out.println("generating values");
+                values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
+                for (int i = 0; i < session.getColumnsPerKey(); i++)
+                    values[i] = generateValues(i);
+                System.out.println("values generated");
+            }
+        }
     }
 
     public void run(Cassandra.Client client) throws IOException
     {
-        if (values == null){
-            synchronized (getClass()){
-                if (values == null){
-                    System.out.println("generating values");
-                    values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
-                    for (int i = 0; i < session.getColumnsPerKey(); i++)
-                        values[i] = generateValues(i);
-                }
-            }
-        }
-
-
         List<Column> columns = new ArrayList<Column>();
         List<SuperColumn> superColumns = new ArrayList<SuperColumn>();
 
