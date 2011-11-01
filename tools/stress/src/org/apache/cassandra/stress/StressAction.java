@@ -134,6 +134,9 @@ public class StressAction extends Thread
                 String formattedDelta = (opDelta > 0) ? Double.toString(latencyDelta / (opDelta * 1000)) : "NaN";
 
                 output.println(String.format("%d,%d,%d,%s,%d", total, opDelta / interval, keyDelta / interval, formattedDelta, currentTimeInSeconds));
+                if(opDelta <= 0){
+                    output.println(String.format("%d, %d, %d, %d, %d, %d", total, oldTotal, keyCount, oldKeyCount, latency, oldLatency));
+                }
             }
         }
 

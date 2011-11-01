@@ -84,6 +84,12 @@ case "$1" in
     else
       echo "$DESC is running with pid $PID."
     fi
+
+    #if [ps -p $PID]; then # > /dev/null
+    #  echo "active"
+    #else
+    #  echo "inactive"
+    #fi
   ;;
 
   *)

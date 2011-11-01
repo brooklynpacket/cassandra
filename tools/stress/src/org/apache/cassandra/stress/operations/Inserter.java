@@ -43,11 +43,19 @@ public class Inserter extends Operation
 
     public void run(Cassandra.Client client) throws IOException
     {
-        if (values == null){
-            values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
-            for (int i = 0; i < session.getColumnsPerKey(); i++)
-                values[i] = generateValues(i);
+        synchronized (getClass()){
+            if (values == null){
+                System.out.println("generating values");
+                values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
+                for (int i = 0; i < session.getColumnsPerKey(); i++)
+                    values[i] = generateValues(i);
+                System.out.println("generating success");
+            }
+            else{
+                System.out.println("not generating");
+            }
         }
+
 
         List<Column> columns = new ArrayList<Column>();
         List<SuperColumn> superColumns = new ArrayList<SuperColumn>();
@@ -109,6 +117,7 @@ public class Inserter extends Operation
 
         if (!success)
         {
+            System.out.println("fail");
             error(String.format("Operation [%d] retried %d times - error inserting key %s %s%n",
                                 index,
                                 session.getRetryTimes(),
