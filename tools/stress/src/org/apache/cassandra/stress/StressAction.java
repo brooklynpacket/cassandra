@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.stress;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.SynchronousQueue;
@@ -172,6 +173,11 @@ public class StressAction extends Thread
                     System.err.println("Producer error - " + e.getMessage());
                     return;
                 }
+                catch (IOException e)
+                {
+                    System.err.println("Producer error - " + e.getMessage());
+                    return;
+                }
             }
         }
 
@@ -228,7 +234,7 @@ public class StressAction extends Thread
         }
     }
 
-    private Operation createOperation(int index)
+    private Operation createOperation(int index) throws IOException
     {
         switch (client.getOperation())
         {
