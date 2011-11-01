@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ "x$CLASSPATH" = "x" ]; then
+if [ "x" = "x" ]; then
     # Cassandra class files.
     if [ ! -d `dirname $0`/../../../build/classes/main ]; then
         echo "Unable to locate cassandra class files" >&2
