@@ -39,7 +39,7 @@ public class IndexedRangeSlicer extends Operation
     public void run(Cassandra.Client client) throws IOException
     {
         if (values == null)
-            values = generateValues();
+            values = generateValues(0);
 
         String format = "%0" + session.getTotalKeysLength() + "d";
         SlicePredicate predicate = new SlicePredicate().setSlice_range(new SliceRange(ByteBufferUtil.EMPTY_BYTE_BUFFER,

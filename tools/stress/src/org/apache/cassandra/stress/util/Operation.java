@@ -22,8 +22,11 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.Date;
+import java.util.UUID;
 
 import static com.google.common.base.Charsets.UTF_8;
 
@@ -33,12 +36,24 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.utils.FBUtilities;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.DataOutputStream;
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+import javax.swing.*;
+
 public abstract class Operation
 {
     public final int index;
 
     protected final Session session;
     protected static volatile Double nextGaussian = null;
+    private BufferedReader _reader;
 
     public Operation(int idx)
     {
@@ -61,11 +76,11 @@ public abstract class Operation
 
     // Utility methods
 
-    protected List<ByteBuffer> generateValues()
+    protected List<ByteBuffer> generateValues(int j) throws IOException
     {
         if (session.averageSizeValues)
         {
-            return generateRandomizedValues();
+            return generateRandomizedValues(j);
         }
 
         List<ByteBuffer> values = new ArrayList<ByteBuffer>();
@@ -73,8 +88,8 @@ public abstract class Operation
         for (int i = 0; i < session.getCardinality(); i++)
         {
             String hash = getMD5(Integer.toString(i));
-            int times = session.getColumnSize() / hash.length();
-            int sumReminder = session.getColumnSize() % hash.length();
+            int times = session.getColumnSize(j) / hash.length();
+            int sumReminder = session.getColumnSize(j) % hash.length();
 
             String value = new StringBuilder(multiplyString(hash, times)).append(hash.substring(0, sumReminder)).toString();
             values.add(ByteBuffer.wrap(value.getBytes()));
@@ -87,19 +102,70 @@ public abstract class Operation
      * Generate values of average size specified by -S, up to cardinality specified by -C
      * @return Collection of the values
      */
-    protected List<ByteBuffer> generateRandomizedValues()
+    protected List<ByteBuffer> generateRandomizedValues(int j) throws IOException
     {
         List<ByteBuffer> values = new ArrayList<ByteBuffer>();
 
-        int limit = 2 * session.getColumnSize();
+        int limit = 2 * session.getColumnSize(j);
+
+        String type = session.getColumnType(j);
+        if(type.equals("json")){
+            try{
+                System.out.println("open " + session.getPath());
+                _reader = new BufferedReader(new FileReader(session.getPath()));
+                for (int k = 0; k < session.getStartingValue(); k++)
+                    _reader.readLine();
+            }
+            catch(Exception e){
+                error(e.getMessage() + " - " + session.getPath());
+            }
+        }
 
         for (int i = 0; i < session.getCardinality(); i++)
         {
             byte[] value = new byte[Stress.randomizer.nextInt(limit)];
-            Stress.randomizer.nextBytes(value);
+            if (type.equals("bytes")){
+                Stress.randomizer.nextBytes(value);
+            }
+            else if (type.equals("utf8")){
+                String uuid = UUID.randomUUID().toString();
+
+                int times = value.length / uuid.length();
+                int sumReminder = value.length % uuid.length();
+
+                String val = new StringBuilder(multiplyString(uuid, times)).append(uuid.substring(0, sumReminder)).toString();
+                value = val.getBytes();
+            }
+            else if(type.equals("date")){
+                Date date = new Date();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                DataOutputStream dos = new DataOutputStream(baos);
+                dos.writeLong(date.getTime());
+                dos.flush();
+                value = baos.toByteArray();
+            }
+            else if(type.equals("json")){
+                String _currentLine = null;
+                try{
+                    _currentLine = _reader.readLine();
+                }
+                catch(Exception e){
+                    error("fail reading json file");
+                }
+
+                if (_currentLine != null)
+                    value = _currentLine.getBytes();
+                else
+                    error("fail: json file too small");
+            }
+            else{
+                throw new IOException("unknown data type for column: '" + type + "'");
+            }
+
             values.add(ByteBuffer.wrap(value));
         }
 
+        _reader.close();
         return values;
     }
 
@@ -119,7 +185,9 @@ public abstract class Operation
     private byte[] generateRandomKey()
     {
         String format = "%0" + session.getTotalKeysLength() + "d";
-        return String.format(format, Stress.randomizer.nextInt(Stress.session.getNumDifferentKeys() - 1)).getBytes(UTF_8);
+
+        return getMD5(Integer.toString(Stress.randomizer.nextInt(Stress.session.getNumDifferentKeys() - 1))).getBytes(UTF_8);
+        //return String.format(format, Stress.randomizer.nextInt(Stress.session.getNumDifferentKeys() - 1)).getBytes(UTF_8);
     }
 
     /**
@@ -172,7 +240,7 @@ public abstract class Operation
      * @param input String
      * @return md5 representation of the string
      */
-    private String getMD5(String input)
+    protected String getMD5(String input)
     {
         MessageDigest md = FBUtilities.threadLocalMD5Digest();
         byte[] messageDigest = md.digest(input.getBytes(UTF_8));

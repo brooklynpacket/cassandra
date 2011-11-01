@@ -32,7 +32,9 @@ import java.util.Map;
 
 public class Inserter extends Operation
 {
-    private static List<ByteBuffer> values;
+    private static List<ByteBuffer>[] values;
+
+    private static HashMap<String, Integer> offset = new HashMap<String, Integer>();
 
     public Inserter(Session client, int index)
     {
@@ -41,8 +43,11 @@ public class Inserter extends Operation
 
     public void run(Cassandra.Client client) throws IOException
     {
-        if (values == null)
-            values = generateValues();
+        if (values == null){
+            values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
+            for (int i = 0; i < session.getColumnsPerKey(); i++)
+                values[i] = generateValues(i);
+        }
 
         List<Column> columns = new ArrayList<Column>();
         List<SuperColumn> superColumns = new ArrayList<SuperColumn>();
@@ -52,9 +57,14 @@ public class Inserter extends Operation
 
         for (int i = 0; i < session.getColumnsPerKey(); i++)
         {
+            int off = 0;
+            if(offset.containsKey(Integer.toString(index)))
+                off = offset.get(Integer.toString(index)).intValue();
+
             String columnName = ("C" + Integer.toString(i));
-            ByteBuffer columnValue = values.get(i % values.size());
+            ByteBuffer columnValue = values[i].get((index + off) % values[i].size());
             columns.add(new Column(ByteBufferUtil.bytes(columnName)).setValue(columnValue).setTimestamp(System.currentTimeMillis()));
+            offset.put(Integer.toString(index), new Integer(off + session.getNumDifferentKeys()));
         }
 
         if (session.getColumnFamilyType() == ColumnFamilyType.Super)
@@ -67,7 +77,8 @@ public class Inserter extends Operation
             }
         }
 
-        String rawKey = String.format(format, index);
+        //String rawKey = String.format(format, index);
+        String rawKey = getMD5(Integer.toString(index));
         Map<ByteBuffer, Map<String, List<Mutation>>> record = new HashMap<ByteBuffer, Map<String, List<Mutation>>>();
 
         record.put(ByteBufferUtil.bytes(rawKey), session.getColumnFamilyType() == ColumnFamilyType.Super

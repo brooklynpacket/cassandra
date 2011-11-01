@@ -18,6 +18,7 @@
 package org.apache.cassandra.stress;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -42,6 +43,8 @@ import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 
+import javax.tools.JavaCompiler;
+
 public class Session implements Serializable
 {
     // command line options
@@ -58,6 +61,8 @@ public class Session implements Serializable
     {
         availableOptions.addOption("h",  "help",                 false,  "Show this help message and exit");
         availableOptions.addOption("J",  "starting-key",         true,   "Starting key, default:0");
+        availableOptions.addOption("L",  "starting-value",       true,   "Starting value position in json file, default:0");
+        availableOptions.addOption("P",  "json path",            true,   "Path of json file");
         availableOptions.addOption("n",  "num-keys",             true,   "Number of keys, default:1000000");
         availableOptions.addOption("F",  "num-different-keys",   true,   "Number of different keys (if < NUM-KEYS, the same key will re-used multiple times), default:NUM-KEYS");
         availableOptions.addOption("N",  "skip-keys",            true,   "Fraction of keys to skip initially, default:0");
@@ -92,13 +97,16 @@ public class Session implements Serializable
         availableOptions.addOption("Z",  "compaction-strategy",  true,   "CompactionStrategy to use.");
     }
 
+    private String path          = "";
     private int startingKey      = 0;
+    private int startingValue    = 0;
     private int numKeys          = 1000 * 1000;
     private int numDifferentKeys = numKeys;
     private float skipKeys       = 0;
     private int threads          = 50;
     private int columns          = 5;
-    private int columnSize       = 34;
+    private int[] columnSizes;
+    private String[] columnTypes;
     private int cardinality      = 50;
     private String[] nodes       = new String[] { "127.0.0.1" };
     private boolean random       = false;
@@ -155,6 +163,12 @@ public class Session implements Serializable
             if (cmd.hasOption("J"))
                 startingKey = Integer.parseInt(cmd.getOptionValue("J"));
 
+            if (cmd.hasOption("L"))
+                startingValue = Integer.parseInt(cmd.getOptionValue("L"));
+
+            if (cmd.hasOption("P"))
+                path = cmd.getOptionValue("P");
+
             if (cmd.hasOption("n"))
                 numKeys = Integer.parseInt(cmd.getOptionValue("n"));
 
@@ -172,8 +186,18 @@ public class Session implements Serializable
             if (cmd.hasOption("c"))
                 columns = Integer.parseInt(cmd.getOptionValue("c"));
 
-            if (cmd.hasOption("S"))
-                columnSize = Integer.parseInt(cmd.getOptionValue("S"));
+            columnSizes = new int[columns];
+            columnTypes = new String[columns];
+            Arrays.fill(columnSizes, 34);
+            Arrays.fill(columnTypes, "bytes");
+            if (cmd.hasOption("S")){
+                String[] ss = cmd.getOptionValue("S").split(",");
+                for(int i = 0; i < ss.length; i++){
+                    String[] tuple = ss[i].split(":");
+                    columnSizes[i] = Integer.parseInt(tuple[0]);
+                    columnTypes[i] = tuple[1];
+                }
+            }
 
             if (cmd.hasOption("C"))
                 cardinality = Integer.parseInt(cmd.getOptionValue("C"));
@@ -349,9 +373,14 @@ public class Session implements Serializable
         return cardinality;
     }
 
-    public int getColumnSize()
+    public int getColumnSize(int i)
     {
-        return columnSize;
+        return columnSizes[i];
+    }
+
+    public String getColumnType(int i)
+    {
+        return columnTypes[i];
     }
 
     public boolean isUnframed()
@@ -374,7 +403,17 @@ public class Session implements Serializable
         return startingKey;
     }
 
-      public int getNumKeys()
+    public int getStartingValue()
+    {
+        return startingValue;
+    }
+
+    public String getPath()
+    {
+        return path;
+    }
+
+    public int getNumKeys()
     {
         return numKeys;
     }
