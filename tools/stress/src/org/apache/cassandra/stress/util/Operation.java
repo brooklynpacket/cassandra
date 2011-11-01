@@ -110,15 +110,10 @@ public abstract class Operation
 
         String type = session.getColumnType(j);
         if(type.equals("json")){
-            try{
-                System.out.println("open " + session.getPath());
-                _reader = new BufferedReader(new FileReader(session.getPath()));
-                for (int k = 0; k < session.getStartingValue(); k++)
-                    _reader.readLine();
-            }
-            catch(Exception e){
-                error(e.getMessage() + " - " + session.getPath());
-            }
+              System.out.println("open " + session.getPath());
+              _reader = new BufferedReader(new FileReader(session.getPath()));
+              for (int k = 0; k < session.getStartingValue(); k++)
+                  _reader.readLine();
         }
 
         for (int i = 0; i < session.getCardinality(); i++)
@@ -165,7 +160,12 @@ public abstract class Operation
             values.add(ByteBuffer.wrap(value));
         }
 
-        _reader.close();
+        try{
+            _reader.close();
+        }
+        catch(Exception exc){
+            System.out.println("cant close json file reader");
+        }
         return values;
     }
 

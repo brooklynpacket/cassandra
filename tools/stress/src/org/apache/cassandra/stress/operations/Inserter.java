@@ -113,7 +113,6 @@ public class Inserter extends Operation
 
         if (!success)
         {
-            System.out.println("fail");
             error(String.format("Operation [%d] retried %d times - error inserting key %s %s%n",
                                 index,
                                 session.getRetryTimes(),
