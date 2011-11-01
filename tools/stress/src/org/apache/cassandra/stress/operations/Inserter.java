@@ -43,16 +43,14 @@ public class Inserter extends Operation
 
     public void run(Cassandra.Client client) throws IOException
     {
-        synchronized (getClass()){
-            if (values == null){
-                System.out.println("generating values");
-                values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
-                for (int i = 0; i < session.getColumnsPerKey(); i++)
-                    values[i] = generateValues(i);
-                System.out.println("generating success");
-            }
-            else{
-                System.out.println("not generating");
+        if (values == null){
+            synchronized (getClass()){
+                if (values == null){
+                    System.out.println("generating values");
+                    values = (List<ByteBuffer>[]) new List[session.getColumnsPerKey()];
+                    for (int i = 0; i < session.getColumnsPerKey(); i++)
+                        values[i] = generateValues(i);
+                }
             }
         }
 
