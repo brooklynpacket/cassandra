@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Date;
 import java.util.UUID;
+import java.util.zip.Deflater;
 
 import static com.google.common.base.Charsets.UTF_8;
 
@@ -36,16 +37,13 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.utils.FBUtilities;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.DataOutputStream;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
-import javax.swing.*;
+import org.apache.commons.codec.binary.Base64;
+import java.util.Arrays;
 
 public abstract class Operation
 {
@@ -109,7 +107,8 @@ public abstract class Operation
         int limit = 2 * session.getColumnSize(j);
 
         String type = session.getColumnType(j);
-        if(type.equals("json")){
+        System.out.println(type);
+        if(type.equals("json") || type.equals("base64-to-zlib")){
               System.out.println("open " + session.getPath());
               _reader = new BufferedReader(new FileReader(session.getPath()));
               for (int k = 0; k < session.getStartingValue(); k++)
@@ -152,6 +151,25 @@ public abstract class Operation
                     value = _currentLine.getBytes();
                 else
                     error("fail: json file too small");
+            }
+            else if(type.equals("base64-to-zlib")){
+                String _currentLine = null;
+                try{
+                    _currentLine = _reader.readLine();
+                }
+                catch(Exception e){
+                    error("fail reading base64-to-zlib file");
+                }
+
+                if (_currentLine != null){
+                    _currentLine = _currentLine.replaceAll("[\r\n]+$","").replaceAll("^[z:]+","");
+                    value = _currentLine.getBytes();
+                }
+                else
+                    error("fail: base64-to-zlib file too small");
+
+                byte[] decoded = Base64.decodeBase64(value);
+                value = decoded;
             }
             else{
                 throw new IOException("unknown data type for column: '" + type + "'");
