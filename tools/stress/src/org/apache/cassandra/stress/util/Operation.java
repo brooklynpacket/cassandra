@@ -222,7 +222,8 @@ public abstract class Operation
 
             if (0 <= token && token < session.getNumDifferentKeys())
             {
-                return String.format(format, (int) token).getBytes(UTF_8);
+                return getMD5(Integer.toString((int) token)).getBytes(UTF_8);
+                //return String.format(format, (int) token).getBytes(UTF_8);
             }
         }
     }
